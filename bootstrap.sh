@@ -29,7 +29,7 @@ if ! command -v nix &>/dev/null; then
 fi
 
 # source nix profiles
-if [[ ! -n "$NIX_PROFILES" ]]; then
+if [[ ! -n "${NIX_PROFILES:-}" ]]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
