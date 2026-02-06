@@ -39,7 +39,7 @@ fi
 
 # install gnupg configuration
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  nix run --override-input parts/nixpkgs path:$(nix registry resolve nixpkgs) github:marksisson/gnupg
+  nix run github:marksisson/gnupg
 fi
 
 # enable ssh auth via gpg-agent
