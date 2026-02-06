@@ -44,7 +44,6 @@ fi
 
 # enable ssh auth via gpg-agent
 export GNUPGHOME="$HOME/.config/gnupg"
-gpgconf --launch gpg-agent
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
 # add github ssh host keys
