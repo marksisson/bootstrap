@@ -4,20 +4,11 @@ set -euo pipefail
 # prompt for sudo upfront
 if ! sudo -n true 2>/dev/null; then
   echo "Requesting sudo access..."
-  if ! sudo -v < /dev/tty; then
-      echo "Failed to get sudo access. Exiting."
-      exit 1
-  fi
+  sudo -v < /dev/tty || { echo "Failed to get sudo access. Exiting."; exit 1; }
 fi
 
 # Keep sudo alive in background (refresh every 60s)
-(
-    while true; do
-        sudo -n true
-        sleep 60
-    done
-) &
-SUDO_KEEPALIVE_PID=$!
+(while true; do sudo -n true; sleep 60; done) & SUDO_KEEPALIVE_PID=$!
 
 # Make sure to kill the background process on exit
 trap 'kill $SUDO_KEEPALIVE_PID' EXIT
@@ -28,7 +19,7 @@ if ! command -v nix &>/dev/null; then
   curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
 fi
 
-# source nix profiles
+# make nix available to current script
 if [[ ! -n "${NIX_PROFILES:-}" ]]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
@@ -39,30 +30,6 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#git nixpkgs#gnupg --command "$0" "$@"
 fi
 
-# prompt for host and user (with defaults)
-default_host="$(hostname -s 2>/dev/null || hostname)"
-default_user="$(whoami)"
-
-read -rp "Host name [$default_host]: " HOST < /dev/tty
-HOST="${HOST:-$default_host}"
-
-read -rp "User name [$default_user]: " USER < /dev/tty
-USER="${USER:-$default_user}"
-
-echo "Using host: $HOST"
-echo "Using user: $USER"
-
-# detect OS
-OS_TYPE="$(uname -s)"
-
-is_darwin=false
-is_linux=false
-
-case "$OS_TYPE" in
-    Darwin*) is_darwin=true ;;
-    Linux*)  is_linux=true ;;
-esac
-
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
@@ -72,6 +39,24 @@ fi
 # enable ssh via gpg-agent
 gpgconf --launch gpg-agent
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+
+# prompt for host (with defaults)
+default_host="$(hostname -s 2>/dev/null || hostname)"
+read -rp "Host name [$default_host]: " HOST < /dev/tty
+HOST="${HOST:-$default_host}"
+
+# prompt for user (with defaults)
+default_user="$(whoami)"
+read -rp "User name [$default_user]: " USER < /dev/tty
+USER="${USER:-$default_user}"
+
+# detect OS
+is_darwin=false
+is_linux=false
+case "$(uname -s)" in
+    Darwin*) is_darwin=true ;;
+    Linux*)  is_linux=true ;;
+esac
 
 if $is_darwin; then
   # move files that nix-darwin will overwrite
@@ -84,18 +69,19 @@ if $is_darwin; then
 
   # install nix-darwin configuration
   if ! command -v darwin-rebuild &>/dev/null; then
-    sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake git+ssh://git@github.com/marksisson/configurations#${HOST}
+    sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- \
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${HOST}
   fi
-fi
 
-# restart nix daemon to pickup nix configuration changes
-sudo launchctl kickstart -k system/systems.determinate.nix-daemon
+  # restart nix daemon to pickup nix configuration changes
+  sudo launchctl kickstart -k system/systems.determinate.nix-daemon
+fi
 
 # install home-manager configuration
 if ! command -v home-manager &>/dev/null; then
-  export NIXPKGS_ALLOW_UNFREE=1
-  export NIXPKGS_ALLOW_BROKEN=1
-  nix run github:nix-community/home-manager#home-manager -- switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${USER}@${HOST} --impure
+  export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
+  nix run github:nix-community/home-manager#home-manager -- \
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${USER}@${HOST} --impure
 fi
 
 echo "Done!"
