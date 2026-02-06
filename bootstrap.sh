@@ -83,6 +83,19 @@ ssh-keyscan github.com > $HOME/.ssh/known_hosts
 }
 
 [ "$(uname -s)" = "Linux" ] && {
+  NIXOS_CONFIGS=$(nix eval --json --impure --expr \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' \
+    | jq -r '.[]' | grep -v '^default$')
+
+  # convert newline-separated list to an array
+  mapfile -t NIXOS_CONFIGS_ARRAY <<< "$NIXOS_CONFIGS"
+
+  echo "Select nixos configuration:"
+  select NIXOS_CONFIG in "${NIXOS_CONFIGS_ARRAY[@]}"; do
+    [[ -n $NIXOS_CONFIG ]] && break
+    echo "Invalid selection, try again."
+  done < /dev/tty
+  
   # install nixos configuration
 }
 
