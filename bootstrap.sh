@@ -43,14 +43,14 @@ fi
 default_host="$(hostname -s 2>/dev/null || hostname)"
 default_user="$(whoami)"
 
-HOST=$(gum input --prompt "$(gum style --foreground 39 "Host name: ")" --placeholder "$default_host")
+read -rp "Host name [$default_host]: " HOST
 HOST="${HOST:-$default_host}"
 
-USER=$(gum input --prompt "$(gum style --foreground 39 "User name: ")" --placeholder "$default_user")
+read -rp "User name [$default_user]: " USER
 USER="${USER:-$default_user}"
 
-gum style --foreground 33 --bold "Using host: $HOST"
-gum style --foreground 33 --bold "Using user: $USER"
+echo "Using host: $HOST"
+echo "Using user: $USER"
 
 # detect OS
 OS_TYPE="$(uname -s)"
@@ -97,4 +97,4 @@ if ! command -v home-manager &>/dev/null; then
   nix run github:nix-community/home-manager#home-manager -- switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${USER}@${HOST} --impure
 fi
 
-gum style --foreground 46 "Done!"
+echo "Done!"
