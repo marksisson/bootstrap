@@ -39,7 +39,7 @@ fi
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  nix run --override-input nixpkgs flake:nixpkgs github:marksisson/gnupg
+  nix run github:marksisson/gnupg
 fi
 
 # enable ssh via gpg-agent
