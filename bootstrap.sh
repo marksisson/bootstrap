@@ -64,7 +64,8 @@ case "$OS_TYPE" in
 esac
 
 # install gnupg configuration
-if [ ! -f ~/.config/gnupg/gpg-agent.conf ]; then
+export GNUPGHOME="$HOME/.config/gnupg"
+if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
   nix run github:marksisson/gnupg
 fi
 
