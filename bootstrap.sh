@@ -4,7 +4,7 @@ set -euo pipefail
 # prompt for sudo upfront
 if ! sudo -n true 2>/dev/null; then
   echo "Requesting sudo access..."
-  if ! sudo -v; then
+  if ! sudo -v < /dev/tty; then
       echo "Failed to get sudo access. Exiting."
       exit 1
   fi
