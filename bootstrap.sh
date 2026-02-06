@@ -38,38 +38,19 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
 fi
 
 # install gnupg configuration
-export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  nix run github:marksisson/gnupg
+  nix run --override-input parts/nixpkgs path:$(nix registry resolve nixpkgs) github:marksisson/gnupg
 fi
 
-# enable ssh via gpg-agent
-gpgconf --launch gpg-agent
+# enable ssh auth via gpg-agent
+export GNUPGHOME="$HOME/.config/gnupg"
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
 # add github ssh host keys
 mkdir -p $HOME/.ssh
 ssh-keyscan github.com > $HOME/.ssh/known_hosts
 
-# prompt for host (with defaults)
-default_host="$(hostname -s 2>/dev/null || hostname)"
-read -rp "Host name [$default_host]: " HOST < /dev/tty
-HOST="${HOST:-$default_host}"
-
-# prompt for user (with defaults)
-default_user="$(whoami)"
-read -rp "User name [$default_user]: " USER < /dev/tty
-USER="${USER:-$default_user}"
-
-# detect OS
-is_darwin=false
-is_linux=false
-case "$(uname -s)" in
-    Darwin*) is_darwin=true ;;
-    Linux*)  is_linux=true ;;
-esac
-
-if $is_darwin; then
+[ "$(uname -s)" = "Darwin" ] && {
   # move files that nix-darwin will overwrite
   if [ -f /etc/nix/nix.custom.conf ]; then
     sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
@@ -78,21 +59,51 @@ if $is_darwin; then
     sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
   fi
 
-  # install nix-darwin configuration
+  DARWIN_CONFIGS=$(nix eval --json --impure --expr \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' \
+    | jq -r '.[]' | grep -v '^default$')
+
+  # convert newline-separated list to an array
+  mapfile -t DARWIN_CONFIGS_ARRAY <<< "$DARWIN_CONFIGS"
+
+  echo "Select darwin configuration:"
+  select DARWIN_CONFIG in "${DARWIN_CONFIGS_ARRAY[@]}"; do
+    [[ -n $DARWIN_CONFIG ]] && break
+    echo "Invalid selection, try again."
+  done < /dev/tty
+
+  # install darwin configuration
   if ! command -v darwin-rebuild &>/dev/null; then
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${HOST}
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG}
   fi
 
   # restart nix daemon to pickup nix configuration changes
   sudo launchctl kickstart -k system/systems.determinate.nix-daemon
-fi
+}
+
+[ "$(uname -s)" = "Linux" ] && {
+  # install nixos configuration
+}
 
 # install home-manager configuration
 if ! command -v home-manager &>/dev/null; then
+  HOME_CONFIGS=$(nix eval --json --impure --expr \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' \
+    | jq -r '.[]' | grep -v '^default$')
+
+  # convert newline-separated list to an array
+  mapfile -t HOME_CONFIGS_ARRAY <<< "$HOME_CONFIGS"
+
+  echo "Select home configuration:"
+  select HOME_CONFIG in "${HOME_CONFIGS_ARRAY[@]}"; do
+    [[ -n $HOME_CONFIG ]] && break
+    echo "Invalid selection, try again."
+  done < /dev/tty
+
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${USER}@${HOST} --impure
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure
 fi
 
 nix registry remove nixpkgs
