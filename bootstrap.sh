@@ -24,9 +24,9 @@ if [[ ! -n "${NIX_PROFILES:-}" ]]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
-# use canonical nixpkgs
-if [[ ! -n "${NIXPKGS:-}" ]]; then
-  NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
+# use local nixpkgs
+if [[ ! -n "${LOCAL_NIXPKGS:-}" ]]; then
+  LOCAL_NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
 fi
 
 # install packages needed by remainder of script
@@ -46,7 +46,7 @@ gpgconf --launch gpg-agent
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
 # add github ssh host keys
-mkdir $HOME/.ssh
+mkdir -p $HOME/.ssh
 ssh-keyscan github.com > $HOME/.ssh/known_hosts
 
 # prompt for host (with defaults)
@@ -78,7 +78,7 @@ if $is_darwin; then
 
   # install nix-darwin configuration
   if ! command -v darwin-rebuild &>/dev/null; then
-    sudo nix run --override-input nixpkgs path:${NIXPKGS} github:nix-darwin/nix-darwin#darwin-rebuild -- \
+    sudo nix run --override-input nixpkgs path:$LOCAL_NIXPKGS github:nix-darwin/nix-darwin#darwin-rebuild -- \
       switch --flake git+ssh://git@github.com/marksisson/configurations#${HOST}
   fi
 
@@ -89,7 +89,7 @@ fi
 # install home-manager configuration
 if ! command -v home-manager &>/dev/null; then
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
-  nix run --override-input nixpkgs path:${NIXPKGS} github:nix-community/home-manager#home-manager -- \
+  nix run --override-input nixpkgs path:$LOCAL_NIXPKGS github:nix-community/home-manager#home-manager -- \
     switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${USER}@${HOST} --impure
 fi
 
