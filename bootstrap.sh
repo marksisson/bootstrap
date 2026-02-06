@@ -36,7 +36,7 @@ fi
 # install packages needed by remainder of script
 if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   export SCRIPT_IN_NIX_SHELL=1
-  exec nix shell nixpkgs#git nixpkgs#gnupg nixpkgs#gum --command "$0" "$@"
+  exec nix shell nixpkgs#git nixpkgs#gnupg --command "$0" "$@"
 fi
 
 # prompt for host and user (with defaults)
