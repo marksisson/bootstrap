@@ -75,10 +75,10 @@ export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
 if $is_darwin; then
   # move files that nix-darwin will overwrite
-  if [ ! -f /etc/nix/nix.custom.conf.before-nix-darwin ]; then
+  if [ -f /etc/nix/nix.custom.conf ]; then
     sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
   fi
-  if [ ! -f /etc/zshenv.before-nix-darwin ]; then
+  if [ -f /etc/zshenv ]; then
     sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
   fi
 
