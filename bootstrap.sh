@@ -43,10 +43,10 @@ fi
 default_host="$(hostname -s 2>/dev/null || hostname)"
 default_user="$(whoami)"
 
-read -rp "Host name [$default_host]: " HOST
+read -rp "Host name [$default_host]: " HOST < /dev/tty
 HOST="${HOST:-$default_host}"
 
-read -rp "User name [$default_user]: " USER
+read -rp "User name [$default_user]: " USER < /dev/tty
 USER="${USER:-$default_user}"
 
 echo "Using host: $HOST"
