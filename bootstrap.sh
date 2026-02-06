@@ -45,6 +45,10 @@ fi
 gpgconf --launch gpg-agent
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
+# add github ssh host keys
+mkdir $HOME/.ssh
+ssh-keyscan github.com > $HOME/.ssh/known_hosts
+
 # prompt for host (with defaults)
 default_host="$(hostname -s 2>/dev/null || hostname)"
 read -rp "Host name [$default_host]: " HOST < /dev/tty
