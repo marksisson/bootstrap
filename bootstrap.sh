@@ -41,51 +41,40 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
-process_output() {
+pretty_print() {
   awk '
     BEGIN {
       tty = (system("test -t 1") == 0)
-      if (tty) {
-        "tput cols" | getline cols
-        close("tput cols")
-        if (cols <= 0) cols = 80
-      }
+      if (tty) { "tput cols" | getline cols; close("tput cols"); if (cols <= 0) cols = 80 }
     }
 
-    function visible_len(s, t) {
-      t = s
-      gsub(/\033\[[0-9;]*[A-Za-z]/, "", t)
-      return length(t)
-    }
+    function visible_len(s, t) { t = s; gsub(/\033\[[0-9;]*[A-Za-z]/, "", t); return length(t) }
 
     function truncate_ansi(s, max, out, i, c, esc, vis) {
-      out = ""
-      esc = 0
-      vis = 0
+      out = ""; esc = 0; vis = 0
       for (i = 1; i <= length(s); i++) {
         c = substr(s, i, 1)
         if (esc) { out = out c; if (c ~ /[A-Za-z]/) esc = 0; continue }
         if (c == "\033") { esc = 1; out = out c; continue }
         if (vis >= max) break
-        out = out c
-        vis++
+        out = out c; vis++
       }
       return out
     }
 
-    /^Starting|^Activating/ { print "\033[34m" $0 "\033[0m"; next }
-    /^setting|^configuring/ { print "\033[34m" $0 "\033[0m"; next }
+    # colored capture of building 'path'...
+    if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
+      line = sprintf("\033[34m%s\033[0m '\033[32m%s\033[0m'%s", arr[1], arr[2], arr[3])
+      line = truncate_ansi(line, cols - 1)
+      printf "\r\033[K%s", line; fflush(); next
+    }
+
+    /^Installing/ { printf "\r\033[K\033[94m%s\033[0m", $0; fflush(); next }
+    /^Starting|^Activating/ { printf "\r\033[K\033[34m%s\033[0m", $0; fflush(); next }
+    /^setting|^configuring/ { printf "\r\033[K\033[34m%s\033[0m", $0; fflush(); next }
 
     # if tty, prints output with "overwrite in place" for non-matching lines
-    {
-      if (tty) {
-        line = truncate_ansi($0, cols - 1)
-        printf "\r\033[K%s", line
-        fflush()
-      } else {
-        print
-      }
-    }
+    { if (tty) { line = truncate_ansi($0, cols - 1); printf "\r\033[K%s", line; fflush() } else { print } }
 
     END { print "" }
   '
@@ -94,7 +83,7 @@ process_output() {
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  printf "\033[94mInstalling gnupg configuration...\n\033[0m"
+  printf "Installing gnupg configuration...\n" | pretty_print
   nix run github:marksisson/gnupg
 fi
 
@@ -135,7 +124,7 @@ fi
 
     echo
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | process_output
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | pretty_print
     echo
   fi
 
@@ -182,7 +171,7 @@ if ! command -v home-manager &>/dev/null; then
   echo
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | process_output
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | pretty_print
   echo
 fi
 
