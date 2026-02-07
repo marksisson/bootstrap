@@ -48,14 +48,14 @@ if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
 fi
 
 # enable ssh auth via gpg-agent
-if [ ! -n "${SSH_AUTH_SOCK:-}" ]; then
+if [[ "${SSH_AUTH_SOCK:-}" != *gpg-agent* ]]; then
   echo "Configuring ssh..."
   export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
-fi
 
-# add github ssh host keys
-mkdir -p "$HOME/.ssh"
-ssh-keyscan -H github.com > $HOME/.ssh/known_hosts
+  # add github ssh host keys
+  mkdir -p "$HOME/.ssh"
+  ssh-keyscan -H github.com > $HOME/.ssh/known_hosts
+fi
 
 [ "$(uname -s)" = "Darwin" ] && {
   # install darwin configuration
