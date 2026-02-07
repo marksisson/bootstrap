@@ -42,7 +42,7 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
 fi
 
 pretty_print() { 
-awk <<'AWK_EOF'
+awk -f <(cat - <<-'AWK_EOF'
 BEGIN {
   tty = (system("test -t 1") == 0)
   if (tty) { "tput cols" | getline cols; close("tput cols"); if (cols <= 0) cols = 80 }
@@ -78,6 +78,7 @@ if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
 
 END { print "" }
 AWK_EOF
+)
 }
 
 # install gnupg configuration
