@@ -63,11 +63,11 @@ function truncate_ansi(s, max, out, i, c, esc, vis) {
 }
 
 # colored capture of building 'path'...
-#if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
-#  line = sprintf("\033[34m%s\033[0m '\033[32m%s\033[0m'%s", arr[1], arr[2], arr[3])
-#  line = truncate_ansi(line, cols - 1)
-#  printf "\r\033[K%s", line; fflush(); next
-#}
+{ if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
+  line = sprintf("\033[34m%s\033[0m '\033[32m%s\033[0m'%s", arr[1], arr[2], arr[3])
+  line = truncate_ansi(line, cols - 1)
+  printf "\r\033[K%s", line; fflush(); next
+} }
 
 /^Installing/ { printf "\r\033[K\033[94m%s\033[0m", $0; fflush(); next }
 /^Starting|^Activating/ { printf "\r\033[K\033[34m%s\033[0m", $0; fflush(); next }
