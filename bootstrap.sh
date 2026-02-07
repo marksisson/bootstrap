@@ -41,6 +41,56 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
+process_output() {
+  awk '
+    BEGIN {
+      tty = (system("test -t 1") == 0)
+      if (tty) {
+        "tput cols" | getline cols
+        close("tput cols")
+        if (cols <= 0) cols = 80
+      }
+    }
+
+    function visible_len(s, t) {
+      t = s
+      gsub(/\033\[[0-9;]*[A-Za-z]/, "", t)
+      return length(t)
+    }
+
+    function truncate_ansi(s, max, out, i, c, esc, vis) {
+      out = ""
+      esc = 0
+      vis = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (esc) { out = out c; if (c ~ /[A-Za-z]/) esc = 0; continue }
+        if (c == "\033") { esc = 1; out = out c; continue }
+        if (vis >= max) break
+        out = out c
+        vis++
+      }
+      return out
+    }
+
+    /^Starting|^Activating/ { print "\033[34m" $0 "\033[0m"; next }
+    /^setting|^configuring/ { print "\033[34m" $0 "\033[0m"; next }
+
+    # if tty, prints output with "overwrite in place" for non-matching lines
+    {
+      if (tty) {
+        line = truncate_ansi($0, cols - 1)
+        printf "\r\033[K%s", line
+        fflush()
+      } else {
+        print
+      }
+    }
+
+    END { print "" }
+  '
+}
+
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
@@ -85,11 +135,7 @@ fi
 
     echo
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | \
-        awk '
-          /^setting|^configuring/ { print "\033[34m" $0 "\033[0m"; next }
-          { printf "\r\033[K%s", $0; fflush() }
-        '
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | process_output
     echo
   fi
 
@@ -136,11 +182,7 @@ if ! command -v home-manager &>/dev/null; then
   echo
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | \
-      awk '
-        /^Starting|^Activating/ { print "\033[34m" $0 "\033[0m"; next }
-        { printf "\r\033[K%s", $0; fflush() }
-      '
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | process_output
   echo
 fi
 
