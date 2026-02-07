@@ -41,7 +41,8 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
-pretty_print() { awk <<'AWK_EOF'
+pretty_print() { 
+awk <<'AWK_EOF'
 BEGIN {
   tty = (system("test -t 1") == 0)
   if (tty) { "tput cols" | getline cols; close("tput cols"); if (cols <= 0) cols = 80 }
