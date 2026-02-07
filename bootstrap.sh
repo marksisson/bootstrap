@@ -69,8 +69,9 @@ fi
       sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
     fi
 
+    printf "\033[94mRetrieving darwin configurations...\n\033[0m"
     DARWIN_CONFIGS=$(nix eval --json --impure --expr \
-      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' \
+      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' 2>/dev/null \
       | jq -r '.[]' | grep -v '^default$')
 
     # convert newline-separated list to an array
@@ -86,7 +87,8 @@ fi
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
       switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | \
         awk '
-          /\.\.\.$/   { print "\033[34m" $0 "\033[0m"; next }
+          /^setting|^configuring/ { print "\033[34m" $0 "\033[0m"; next }
+          { printf "\r\033[K\033[90m%s\033[0m", $0; fflush() }
         '
     echo
   fi
@@ -96,8 +98,9 @@ fi
 }
 
 [ "$(uname -s)" = "Linux" ] && {
+  printf "\033[94mRetrieving nixos configurations...\n\033[0m"
   NIXOS_CONFIGS=$(nix eval --json --impure --expr \
-    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' 2>/dev/null \
     | jq -r '.[]' | grep -v '^default$')
 
   # convert newline-separated list to an array
@@ -116,8 +119,9 @@ fi
 
 # install home-manager configuration
 if ! command -v home-manager &>/dev/null; then
+  printf "\033[94mRetrieving home configurations...\n\033[0m"
   HOME_CONFIGS=$(nix eval --json --impure --expr \
-    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' 2>/dev/null \
     | jq -r '.[]' | grep -v '^default$')
 
   # convert newline-separated list to an array
@@ -134,8 +138,8 @@ if ! command -v home-manager &>/dev/null; then
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
     switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | \
       awk '
-        /^Starting/   { print "\033[34m" $0 "\033[0m"; next }
-        /^Activating/ { print "\033[35m" $0 "\033[0m"; next }
+        /^Starting|^Activating/ { print "\033[34m" $0 "\033[0m"; next }
+        { printf "\r\033[K\033[90m%s\033[0m", $0; fflush() }
       '
   echo
 fi
