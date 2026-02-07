@@ -38,7 +38,7 @@ nix registry add nixpkgs $NIXPKGS
 if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   export SCRIPT_IN_NIX_SHELL=1
   cleanup # since script is not exiting (just exec'ing), manually cleanup sudo keepalive
-  exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
+  exec nix shell nixpkgs#awk nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
 pretty_print() { 
