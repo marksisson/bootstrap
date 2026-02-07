@@ -78,7 +78,7 @@ function truncate_ansi(s, max, out, i, c, esc, vis) {
 # if tty, prints output with "overwrite in place" for non-matching lines
 { if (tty) { line = truncate_ansi($0, cols - 1); printf "\r\033[K%s", line; fflush() } else { print } }
 
-END { printf "\r\033[K\033[34m%s\033[0m\n", $0; fflush() }
+END { printf "\r\033[K\033[34m%s\033[0m\n", completion; fflush() }
 AWK_EOF
 )
 }
