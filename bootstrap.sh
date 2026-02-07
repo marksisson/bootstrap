@@ -11,7 +11,8 @@ fi
 (while true; do sudo -n true; sleep 60; done) & SUDO_KEEPALIVE_PID=$!
 
 # Make sure to kill the background process on exit
-trap 'kill $SUDO_KEEPALIVE_PID' EXIT
+cleanup() { kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true; }
+trap cleanup EXIT INT TERM
 
 # install nix
 if ! command -v nix &>/dev/null; then
@@ -20,62 +21,73 @@ if ! command -v nix &>/dev/null; then
 fi
 
 # make nix available to current script
-if [[ ! -n "${NIX_PROFILES:-}" ]]; then
+if [ ! -n "${NIX_PROFILES:-}" ]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
 # use local nixpkgs
-if [[ ! -n "${NIXPKGS:-}" ]]; then
-  NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
+if [ ! -n "${NIXPKGS:-}" ]; then
+  export NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
 fi
 
+# add local nixpkgs to user registry
 nix registry add nixpkgs $NIXPKGS
 
 # install packages needed by remainder of script
 if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   export SCRIPT_IN_NIX_SHELL=1
-  exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg --command bash "$@"
+  cleanup # since script is not exiting (just exec'ing), manually cleanup sudo keepalive
+  exec nix shell nixpkgs#bash nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
 # install gnupg configuration
+export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
+  echo "Installing gnupg configuration..."
   nix run github:marksisson/gnupg
 fi
 
 # enable ssh auth via gpg-agent
-export GNUPGHOME="$HOME/.config/gnupg"
-export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+if [ ! -n "${SSH_AUTH_SOCK:-}" ]; then
+  echo "Configuring ssh..."
+  export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+fi
 
 # add github ssh host keys
-mkdir -p $HOME/.ssh
-ssh-keyscan github.com > $HOME/.ssh/known_hosts
+mkdir -p "$HOME/.ssh"
+ssh-keyscan -H github.com > $HOME/.ssh/known_hosts
 
 [ "$(uname -s)" = "Darwin" ] && {
-  # move files that nix-darwin will overwrite
-  if [ -f /etc/nix/nix.custom.conf ]; then
-    sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
-  fi
-  if [ -f /etc/zshenv ]; then
-    sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
-  fi
-
-  DARWIN_CONFIGS=$(nix eval --json --impure --expr \
-    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' \
-    | jq -r '.[]' | grep -v '^default$')
-
-  # convert newline-separated list to an array
-  mapfile -t DARWIN_CONFIGS_ARRAY <<< "$DARWIN_CONFIGS"
-
-  echo "Select darwin configuration:"
-  select DARWIN_CONFIG in "${DARWIN_CONFIGS_ARRAY[@]}"; do
-    [[ -n $DARWIN_CONFIG ]] && break
-    echo "Invalid selection, try again."
-  done < /dev/tty
-
   # install darwin configuration
   if ! command -v darwin-rebuild &>/dev/null; then
+    # move files that nix-darwin will overwrite
+    if [ -f /etc/nix/nix.custom.conf ]; then
+      sudo mv /etc/nix/nix.custom.conf /etc/nix/nix.custom.conf.before-nix-darwin
+    fi
+    if [ -f /etc/zshenv ]; then
+      sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
+    fi
+
+    DARWIN_CONFIGS=$(nix eval --json --impure --expr \
+      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' \
+      | jq -r '.[]' | grep -v '^default$')
+
+    # convert newline-separated list to an array
+    mapfile -t DARWIN_CONFIGS_ARRAY <<< "$DARWIN_CONFIGS"
+
+    echo; echo "Select darwin configuration:"
+    select DARWIN_CONFIG in "${DARWIN_CONFIGS_ARRAY[@]}"; do
+      [[ -n $DARWIN_CONFIG ]] && break
+      echo "Invalid selection, try again."
+    done < /dev/tty
+
+    echo
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG}
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | \
+        awk '
+          /\.\.\.$/   { print "\033[34m" $0 "\033[0m"; next }
+        '
+    echo
   fi
 
   # restart nix daemon to pickup nix configuration changes
@@ -97,6 +109,8 @@ ssh-keyscan github.com > $HOME/.ssh/known_hosts
   done < /dev/tty
   
   # install nixos configuration
+  echo "NixOS install not yet implemented"
+  exit 1
 }
 
 # install home-manager configuration
@@ -114,11 +128,18 @@ if ! command -v home-manager &>/dev/null; then
     echo "Invalid selection, try again."
   done < /dev/tty
 
+  echo
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | \
+      awk '
+        /^Starting/   { print "\033[34m" $0 "\033[0m"; next }
+        /^Activating/ { print "\033[35m" $0 "\033[0m"; next }
+      '
+  echo
 fi
 
+# remove local nixpkgs from user registry
 nix registry remove nixpkgs
 
 echo "Done!"
