@@ -41,8 +41,10 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#bash nixpkgs#gawk nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
-pretty_print() { 
-gawk -f <(cat - <<-'AWK_EOF'
+pretty_print() {
+  local completion="${1:-}"  # optional completion message
+
+  gawk -v completion="$completion" -f <(cat - <<-'AWK_EOF'
 BEGIN {
   tty = (system("test -t 1") == 0)
   if (tty) { "tput cols" | getline cols; close("tput cols"); if (cols <= 0) cols = 80 }
@@ -76,7 +78,7 @@ function truncate_ansi(s, max, out, i, c, esc, vis) {
 # if tty, prints output with "overwrite in place" for non-matching lines
 { if (tty) { line = truncate_ansi($0, cols - 1); printf "\r\033[K%s", line; fflush() } else { print } }
 
-END { print "" }
+END { printf "\r\033[K\033[34m%s\033[0m\n", $0; fflush() }
 AWK_EOF
 )
 }
@@ -125,7 +127,7 @@ fi
 
     echo
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | pretty_print
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | pretty_print "darwin configuration complete..."
     echo
   fi
 
