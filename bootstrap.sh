@@ -3,7 +3,7 @@ set -euo pipefail
 
 # prompt for sudo upfront
 if ! sudo -n true 2>/dev/null; then
-  echo "Requesting sudo access..."
+  print "\033[92m" "Requesting sudo access..." "\033[0m"
   sudo -v < /dev/tty || { echo "Failed to get sudo access. Exiting."; exit 1; }
 fi
 
@@ -16,6 +16,7 @@ trap cleanup EXIT INT TERM
 
 # install nix
 if ! command -v nix &>/dev/null; then
+  print "\033[94m" "Installing Nix..." "\033[0m"
   echo "Installing Nix..."
   curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
 fi
@@ -27,6 +28,7 @@ fi
 
 # use local nixpkgs
 if [ ! -n "${NIXPKGS:-}" ]; then
+  print "\033[94m" "Installing canonical nixpkgs..." "\033[0m"
   export NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
 fi
 
@@ -43,13 +45,13 @@ fi
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  echo "Installing gnupg configuration..."
+  print "\033[94m" "Installing gnupg configuration..." "\033[0m"
   nix run github:marksisson/gnupg
 fi
 
 # enable ssh auth via gpg-agent
 if [[ "${SSH_AUTH_SOCK:-}" != *gpg-agent* ]]; then
-  echo "Configuring ssh..."
+  print "\033[94m" "Configuring ssh..." "\033[0m"
   export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
   # add github ssh host keys
@@ -75,7 +77,7 @@ fi
     # convert newline-separated list to an array
     mapfile -t DARWIN_CONFIGS_ARRAY <<< "$DARWIN_CONFIGS"
 
-    echo; echo "Select darwin configuration:"
+    print "\033[94m" "\nSelect darwin configuration:" "\033[0m"
     select DARWIN_CONFIG in "${DARWIN_CONFIGS_ARRAY[@]}"; do
       [[ -n $DARWIN_CONFIG ]] && break
       echo "Invalid selection, try again."
@@ -102,7 +104,7 @@ fi
   # convert newline-separated list to an array
   mapfile -t NIXOS_CONFIGS_ARRAY <<< "$NIXOS_CONFIGS"
 
-  echo "Select nixos configuration:"
+  print "\033[94m" "\nSelect nixos configuration:" "\033[0m"
   select NIXOS_CONFIG in "${NIXOS_CONFIGS_ARRAY[@]}"; do
     [[ -n $NIXOS_CONFIG ]] && break
     echo "Invalid selection, try again."
@@ -122,7 +124,7 @@ if ! command -v home-manager &>/dev/null; then
   # convert newline-separated list to an array
   mapfile -t HOME_CONFIGS_ARRAY <<< "$HOME_CONFIGS"
 
-  echo "Select home configuration:"
+  print "\033[94m" "\nSelect home configuration:" "\033[0m"
   select HOME_CONFIG in "${HOME_CONFIGS_ARRAY[@]}"; do
     [[ -n $HOME_CONFIG ]] && break
     echo "Invalid selection, try again."
@@ -142,4 +144,4 @@ fi
 # remove local nixpkgs from user registry
 nix registry remove nixpkgs
 
-echo "Done!"
+print "\033[92m" "\nDone!" "\033[0m"
