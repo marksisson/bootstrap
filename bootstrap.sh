@@ -88,7 +88,7 @@ fi
       switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | \
         awk '
           /^setting|^configuring/ { print "\033[34m" $0 "\033[0m"; next }
-          { printf "\r\033[K\033[90m%s\033[0m", $0; fflush() }
+          { printf "\r\033[K%s", $0; fflush() }
         '
     echo
   fi
@@ -139,7 +139,7 @@ if ! command -v home-manager &>/dev/null; then
     switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | \
       awk '
         /^Starting|^Activating/ { print "\033[34m" $0 "\033[0m"; next }
-        { printf "\r\033[K\033[90m%s\033[0m", $0; fflush() }
+        { printf "\r\033[K%s", $0; fflush() }
       '
   echo
 fi
