@@ -1,0 +1,163 @@
+#!/usr/bin/env gawk -f
+
+BEGIN {
+  styles()
+
+  if (ARGC == 1 && system("test -t 0") == 0) {
+    print_usage()
+    exit 0
+  }
+}
+
+# colored capture of building 'path'...
+{
+  if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
+    line = sprintf("\033[34m%s\033[0m '\033[32m%s\033[0m'%s", arr[1], arr[2], arr[3])
+    line = truncate_ansi(line, cols - 1)
+    printf "\r\033[K%s", line; fflush(); next
+  }
+}
+
+/^Installing|^Configuring|^Starting|^Activating|^setting|^configuring/ {
+  line = $0
+
+  # Truncate if tty
+  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
+
+  print CR CLEAR_LINE INFO line RESET
+  if (tty) fflush()
+  next
+}
+
+{
+  line = $0
+
+  # Truncate if tty
+  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
+
+  # Print with in-place overwrite
+  print CR CLEAR_LINE INFO_BADGE " " line RESET
+  if (tty) fflush()
+}
+
+END {
+  # Print optional completion message in color if non-empty
+  if (completion != "") {
+    line = completion
+    if (tty && cols > 0) line = truncate_ansi(line, cols-1)
+    print CR CLEAR_LINE INFO line RESET
+  }
+  print LF
+  if (tty) fflush()
+}
+
+function print_usage(    self) {
+    self = script_name()
+
+    ORS = "\n"
+
+    print HEADER "Usage" RESET
+    print "  " BOLD self RESET " [options] < input"
+    print ""
+
+    print HEADER "Description" RESET
+    print "  " INFO "Formats and colorizes build output." RESET
+    print ""
+
+    print HEADER "Environment" RESET
+    print "  " INFO "NO_COLOR" RESET "      Disable ANSI colors"
+    print ""
+
+    print INFO_BADGE " Reads from stdin and writes to stdout " RESET
+}
+
+function styles() {
+  ORS = ""
+
+  tty = (system("test -t 1") == 0)
+  if (tty) { cols = terminal_capability("cols"); if (cols <= 0) cols = 80 } else { cols = 0 }
+
+  CR = "\r"
+  LF = "\n"
+
+  RESET      = terminal_capability("sgr0")
+  CLEAR_LINE = terminal_capability("el")
+
+  BOLD       = terminal_capability("bold")
+  BOLD_OFF = "\033[22m"
+
+  UNDERLINE  = terminal_capability("smul")
+  UNDERLINE_OFF = terminal_capability("rmul")
+
+  # Define some basic colors
+  WHITE_FG = foreground_color("white")
+  RED_BG   = background_color("red")
+  BLUE_BG  = background_color("blue")
+  BLUE_FG  = foreground_color("blue")
+  GREEN_FG = foreground_color("green")
+
+  # Semantic Styles
+  HEADER  = BOLD BLUE_FG
+  INFO    = BLUE_FG
+  WARNING = BOLD RED_FG UNDERLINE
+  SUCCESS = GREEN_FG
+
+  # Semantic Badges
+  # Badge logic: [Background][Foreground][Bold] text [Reset]
+  ERROR_BADGE   = RED_BG WHITE_FG BOLD " ERROR " RESET
+  INFO_BADGE    = BLUE_BG WHITE_FG BOLD " INFO " RESET
+}
+
+function basename(path,    n, a) {
+    n = split(path, a, "/")
+    return a[n]
+}
+
+function script_name(    s) {
+    s = ENVIRON["_"]
+
+    # If ENVIRON["_"] is missing or just points at gawk, fall back
+    if (s == "" || s ~ /(^|\/)gawk$/)
+        s = ARGV[0]
+
+    return basename(s)
+}
+
+function background_color(name) {
+  return terminal_color(name, 1)
+}
+
+function foreground_color(name) {
+  return terminal_color(name, 0)
+}
+
+function terminal_capability(capability,    output, status) {
+    if (ENVIRON["NO_COLOR"]) return ""
+    cmd = "tput " capability
+    status = (cmd | getline output)
+    close(cmd)
+    return (status > 0) ? output : ""
+}
+
+function terminal_color(name, is_bg,    colors, color_map) {
+    split("black red green yellow blue magenta cyan white", colors, " ")
+    for (i in colors) color_map[colors[i]] = i - 1
+
+    if (name in color_map) {
+        capability = (is_bg) ? "setab " : "setaf "
+        return terminal_capability(capability color_map[name])
+    }
+    return ""
+}
+
+function truncate_ansi(s, max,    out, i, c, esc, vis) {
+  out = ""; esc = 0; vis = 0
+  for (i = 1; i <= length(s); i++) {
+    c = substr(s, i, 1)
+    if (esc) { out = out c; if (c ~ /[A-Za-z]/) esc = 0; continue }
+    if (c == "\033") { esc = 1; out = out c; continue }
+    if (vis >= max) break
+    out = out c; vis++
+  }
+  return out
+}
