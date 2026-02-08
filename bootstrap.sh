@@ -41,6 +41,8 @@ if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
   exec nix shell nixpkgs#bash nixpkgs#gawk nixpkgs#git nixpkgs#gnupg nixpkgs#jq --command bash "$@"
 fi
 
+# nb. this function will not parse with default (old) macos bash; need bash from nixpkgs
+# nb. using gawk (from nixpkgs) for advanced match function
 pretty_print() {
   local completion="${1:-}"  # optional completion message
 
@@ -80,7 +82,8 @@ pretty_print() {
 
     END { printf "\r\033[K\033[34m%s\033[0m\n", completion; fflush() }
 AWK_EOF
-)}
+)
+}
 
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
@@ -173,7 +176,7 @@ if ! command -v home-manager &>/dev/null; then
   echo
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | pretty_print
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | pretty_print "home configuration complete..."
   echo
 fi
 
