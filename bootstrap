@@ -89,7 +89,7 @@ echo
 
     printf "Retrieving darwin configurations...\n" | pretty_print
     DARWIN_CONFIGS=$(nix eval --json --impure --expr \
-      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations'; 2> >(pretty_print >&2) \
+      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' 2> >(pretty_print >&2) \
       | jq -r '.[]' | grep -v '^default$')
 
     # convert newline-separated list to an array
