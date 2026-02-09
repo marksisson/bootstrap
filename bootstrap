@@ -65,7 +65,7 @@ echo
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
   printf "Installing gnupg configuration...\n" | pretty_print
-  nix run github:marksisson/gnupg 2> >(pretty_print >&2)
+  nix run github:marksisson/gnupg 2>&1 | pretty_print
 fi
 
 # enable ssh auth via gpg-agent
