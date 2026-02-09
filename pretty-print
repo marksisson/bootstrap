@@ -10,22 +10,22 @@ BEGIN {
 }
 
 /^Installing|^Configuring|^Retrieving/ {
-  show(CR CLEAR_LINE STEP $0 RESET)
+  show(CR CLEAR_LINE STEP $0)
   next
 }
 
 /^Select/ {
-  show(CR CLEAR_LINE CHOOSE $0 RESET)
+  show(CR CLEAR_LINE CHOOSE $0)
   next
 }
 
 /^Invalid/ {
-  show(CR CLEAR_LINE WARNING $0 RESET)
+  show(CR CLEAR_LINE WARNING $0)
   next
 }
 
 /^Done/ {
-  show(CR CLEAR_LINE DONE $0 RESET)
+  show(CR CLEAR_LINE DONE $0)
   next
 }
 
@@ -52,14 +52,14 @@ BEGIN {
 }
 
 {
-  show(CR CLEAR_LINE INFO_BADGE SPACE $0 RESET)
+  show(CR CLEAR_LINE INFO_BADGE SPACE $0)
   next
 }
 
 END {
   # Print optional completion message in color if non-empty
   if (completion != "") {
-    show(CR CLEAR_LINE DONE completion RESET LF)
+    show(CR CLEAR_LINE DONE completion LF)
   }
   else {
     show(LF)
@@ -88,7 +88,7 @@ function print_usage(    self) {
 
 function show(line) {
   if (tty && cols > 0) line = truncate_ansi(line, cols-1)
-  print line
+  print line RESET
   if (tty) fflush()
 }
 
