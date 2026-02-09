@@ -89,7 +89,7 @@ echo
 
     printf "Retrieving darwin configurations...\n" | pretty_print
     DARWIN_CONFIGS=$(nix eval --json --impure --expr \
-      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' 2> >(pretty_print >&2) \
+      'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' 2> >(pretty_print -v completion=" " >&2) \
       | jq -r '.[]' | grep -v '^default$')
 
     # convert newline-separated list to an array
@@ -114,7 +114,7 @@ echo
 [ "$(uname -s)" = "Linux" ] && {
   printf "Retrieving nixos configurations...\n" | pretty_print
   NIXOS_CONFIGS=$(nix eval --json --impure --expr \
-    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' 2>/dev/null \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' 2> >(pretty_print -v completion=" " >&2) \
     | jq -r '.[]' | grep -v '^default$')
 
   # convert newline-separated list to an array
@@ -135,7 +135,7 @@ echo
 if ! command -v home-manager &>/dev/null; then
   printf "Retrieving home configurations...\n" | pretty_print
   HOME_CONFIGS=$(nix eval --json --impure --expr \
-    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' 2>/dev/null \
+    'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' 2> >(pretty_print -v completion=" " >&2) \
     | jq -r '.[]' | grep -v '^default$')
 
   # convert newline-separated list to an array

@@ -45,8 +45,8 @@ BEGIN {
 }
 
 {
-  if (match($0, /^unpacking '([^']+)'\.\.\.$/, arr)) {
-    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" "...")
+  if (match($0, /^unpacking '([^']+)' into the Git cache\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" SPACE "into the Git cache...")
     next
   }
 }
