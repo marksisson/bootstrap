@@ -83,7 +83,7 @@ fi
       sudo mv /etc/zshenv /etc/zshenv.before-nix-darwin
     fi
 
-    printf "\033[94mRetrieving darwin configurations...\n\033[0m"
+    printf "Retrieving darwin configurations...\n" | pretty_print
     DARWIN_CONFIGS=$(nix eval --json --impure --expr \
       'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.darwinConfigurations' 2>/dev/null \
       | jq -r '.[]' | grep -v '^default$')
@@ -91,10 +91,10 @@ fi
     # convert newline-separated list to an array
     mapfile -t DARWIN_CONFIGS_ARRAY <<< "$DARWIN_CONFIGS"
 
-    printf "\033[94m\nSelect darwin configuration:\n\033[0m"
+    printf "Select darwin configuration:\n" | pretty_print
     select DARWIN_CONFIG in "${DARWIN_CONFIGS_ARRAY[@]}"; do
       [[ -n $DARWIN_CONFIG ]] && break
-      printf "\033[91mInvalid selection, try again.\n\033[0m"
+      printf "Invalid selection, try again.\n" | pretty_print
     done < /dev/tty
 
     echo
@@ -108,7 +108,7 @@ fi
 }
 
 [ "$(uname -s)" = "Linux" ] && {
-  printf "\033[94mRetrieving nixos configurations...\n\033[0m"
+  printf "Retrieving nixos configurations...\n" | pretty_print
   NIXOS_CONFIGS=$(nix eval --json --impure --expr \
     'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.nixosConfigurations' 2>/dev/null \
     | jq -r '.[]' | grep -v '^default$')
@@ -116,10 +116,10 @@ fi
   # convert newline-separated list to an array
   mapfile -t NIXOS_CONFIGS_ARRAY <<< "$NIXOS_CONFIGS"
 
-  printf "\033[94m\nSelect nixos configuration:\n\033[0m"
+  printf "Select nixos configuration:\n" | pretty_print
   select NIXOS_CONFIG in "${NIXOS_CONFIGS_ARRAY[@]}"; do
     [[ -n $NIXOS_CONFIG ]] && break
-    printf "\033[91mInvalid selection, try again.\n\033[0m"
+    printf "Invalid selection, try again.\n" | pretty_print
   done < /dev/tty
   
   # install nixos configuration
@@ -129,7 +129,7 @@ fi
 
 # install home-manager configuration
 if ! command -v home-manager &>/dev/null; then
-  printf "\033[94mRetrieving home configurations...\n\033[0m"
+  printf "Retrieving home configurations...\n" | pretty_print
   HOME_CONFIGS=$(nix eval --json --impure --expr \
     'let flake = builtins.getFlake "git+ssh://git@github.com/marksisson/configurations"; in builtins.attrNames flake.outputs.homeConfigurations' 2>/dev/null \
     | jq -r '.[]' | grep -v '^default$')
@@ -137,10 +137,10 @@ if ! command -v home-manager &>/dev/null; then
   # convert newline-separated list to an array
   mapfile -t HOME_CONFIGS_ARRAY <<< "$HOME_CONFIGS"
 
-  printf "\033[94m\nSelect home configuration:\n\033[0m"
+  printf "Select home configuration:\n" | pretty_print
   select HOME_CONFIG in "${HOME_CONFIGS_ARRAY[@]}"; do
     [[ -n $HOME_CONFIG ]] && break
-    printf "\033[91mInvalid selection, try again.\n\033[0m"
+    printf "Invalid selection, try again.\n" | pretty_print
   done < /dev/tty
 
   echo
@@ -153,4 +153,4 @@ fi
 # remove local nixpkgs from user registry
 nix registry remove nixpkgs
 
-printf "\033[92m\nDone!\n\033[0m"
+printf "Done!\n" | pretty_print

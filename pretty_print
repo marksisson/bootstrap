@@ -12,43 +12,29 @@ BEGIN {
 # colored capture of building 'path'...
 {
   if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
-    line = sprintf("\033[34m%s\033[0m '\033[32m%s\033[0m'%s", arr[1], arr[2], arr[3])
-    line = truncate_ansi(line, cols - 1)
-    printf "\r\033[K%s", line; fflush(); next
+    show(CR CLEAR_LINE INFO arr[1] SPACE WHITE_FG "'" SUCCESS arr[2] WHITE_FG "'" arr[3])
+    next
   }
 }
 
 /^Installing|^Configuring|^Starting|^Activating|^setting|^configuring/ {
-  line = $0
-
-  # Truncate if tty
-  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
-
-  print CR CLEAR_LINE INFO line RESET
-  if (tty) fflush()
+  show(CR CLEAR_LINE INFO $0 RESET)
   next
 }
 
 {
-  line = $0
-
-  # Truncate if tty
-  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
-
-  # Print with in-place overwrite
-  print CR CLEAR_LINE INFO_BADGE " " line RESET
-  if (tty) fflush()
+  show(CR CLEAR_LINE INFO_BADGE " " $0 RESET)
+  next
 }
 
 END {
   # Print optional completion message in color if non-empty
   if (completion != "") {
-    line = completion
-    if (tty && cols > 0) line = truncate_ansi(line, cols-1)
-    print CR CLEAR_LINE INFO line RESET
+    show(CR CLEAR_LINE INFO completion RESET LF)
   }
-  print LF
-  if (tty) fflush()
+  else {
+    show(LF)
+  }
 }
 
 function print_usage(    self) {
@@ -71,6 +57,12 @@ function print_usage(    self) {
     print INFO_BADGE " Reads from stdin and writes to stdout " RESET
 }
 
+function show(line) {
+  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
+  print line
+  if (tty) fflush()
+}
+
 function styles() {
   ORS = ""
 
@@ -79,6 +71,7 @@ function styles() {
 
   CR = "\r"
   LF = "\n"
+  SPACE = " "
 
   RESET      = terminal_capability("sgr0")
   CLEAR_LINE = terminal_capability("el")
