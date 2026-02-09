@@ -54,6 +54,7 @@ BEGIN {
 # age
 /^Wrong password/ {
   show(CR CLEAR_LINE ERROR $0 LF)
+  next
 }
 
 {
