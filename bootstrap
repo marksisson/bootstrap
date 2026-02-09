@@ -55,6 +55,8 @@ pretty_print() {
   gawk -v completion="$completion" "$PRETTY_PRINT"
 }
 
+echo
+
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
@@ -71,6 +73,8 @@ if [[ "${SSH_AUTH_SOCK:-}" != *gpg-agent* ]]; then
   mkdir -p "$HOME/.ssh"
   ssh-keyscan -H github.com > $HOME/.ssh/known_hosts
 fi
+
+echo
 
 [ "$(uname -s)" = "Darwin" ] && {
   # install darwin configuration

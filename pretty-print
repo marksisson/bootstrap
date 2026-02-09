@@ -9,28 +9,57 @@ BEGIN {
   }
 }
 
-# colored capture of building 'path'...
-{
-  if (match($0, /^([a-z]+) '([^']+)'(\.\.\.)$/, arr)) {
-    show(CR CLEAR_LINE INFO arr[1] SPACE WHITE_FG "'" SUCCESS arr[2] WHITE_FG "'" arr[3])
-    next
-  }
+/^Installing|^Configuring|^Retrieving/ {
+  show(CR CLEAR_LINE STEP $0 RESET)
+  next
 }
 
-/^Installing|^Configuring|^Retrieving|^Select|^Done/ {
-  show(CR CLEAR_LINE INFO $0 RESET)
+/^Select/ {
+  show(CR CLEAR_LINE CHOOSE $0 RESET)
+  next
+}
+
+/^Invalid/ {
+  show(CR CLEAR_LINE WARNING $0 RESET)
+  next
+}
+
+/^Done/ {
+  show(CR CLEAR_LINE DONE $0 RESET)
   next
 }
 
 {
-  show(CR CLEAR_LINE INFO_BADGE " " $0 RESET)
+  if (match($0, /^building '([^']+)'\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "building" SPACE DIM "'" PATH arr[1] RESET DIM "'" "...")
+    next
+  }
+}
+
+{
+  if (match($0, /^copying path '([^']+)' from '([^']+)'\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE \
+      DIM "copying path" SPACE DIM "'" PATH arr[1] RESET DIM "'" SPACE "from" SPACE "'" URL arr[2] RESET DIM "'" "...")
+    next
+  }
+}
+
+{
+  if (match($0, /^unpacking '([^']+)'\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" "...")
+    next
+  }
+}
+
+{
+  show(CR CLEAR_LINE INFO_BADGE SPACE $0 RESET)
   next
 }
 
 END {
   # Print optional completion message in color if non-empty
   if (completion != "") {
-    show(CR CLEAR_LINE INFO completion RESET LF)
+    show(CR CLEAR_LINE DONE completion RESET LF)
   }
   else {
     show(LF)
@@ -82,23 +111,92 @@ function styles() {
   UNDERLINE  = terminal_capability("smul")
   UNDERLINE_OFF = terminal_capability("rmul")
 
-  # Define some basic colors
-  WHITE_FG = foreground_color("white")
-  RED_BG   = background_color("red")
-  BLUE_BG  = background_color("blue")
-  BLUE_FG  = foreground_color("blue")
-  GREEN_FG = foreground_color("green")
+  # Standard foreground colors
+  BLACK_FG   = foreground_color("black")
+  RED_FG     = foreground_color("red")
+  GREEN_FG   = foreground_color("green")
+  YELLOW_FG  = foreground_color("yellow")
+  BLUE_FG    = foreground_color("blue")
+  MAGENTA_FG = foreground_color("magenta")
+  CYAN_FG    = foreground_color("cyan")
+  WHITE_FG   = foreground_color("white")
 
-  # Semantic Styles
-  HEADER  = BOLD BLUE_FG
-  INFO    = BLUE_FG
-  WARNING = BOLD RED_FG UNDERLINE
-  SUCCESS = GREEN_FG
+  # Standard background colors
+  BLACK_BG   = background_color("black")
+  RED_BG     = background_color("red")
+  GREEN_BG   = background_color("green")
+  YELLOW_BG  = background_color("yellow")
+  BLUE_BG    = background_color("blue")
+  MAGENTA_BG = background_color("magenta")
+  CYAN_BG    = background_color("cyan")
+  WHITE_BG   = background_color("white")
 
-  # Semantic Badges
-  # Badge logic: [Background][Foreground][Bold] text [Reset]
-  ERROR_BADGE   = RED_BG WHITE_FG BOLD " ERROR " RESET
-  INFO_BADGE    = BLUE_BG WHITE_FG BOLD " INFO " RESET
+  # Bright foreground colors
+  BRIGHT_BLACK_FG   = bright_foreground_color("black")
+  BRIGHT_RED_FG     = bright_foreground_color("red")
+  BRIGHT_GREEN_FG   = bright_foreground_color("green")
+  BRIGHT_YELLOW_FG  = bright_foreground_color("yellow")
+  BRIGHT_BLUE_FG    = bright_foreground_color("blue")
+  BRIGHT_MAGENTA_FG = bright_foreground_color("magenta")
+  BRIGHT_CYAN_FG    = bright_foreground_color("cyan")
+  BRIGHT_WHITE_FG   = bright_foreground_color("white")
+
+  # Bright background colors
+  BRIGHT_BLACK_BG   = bright_background_color("black")
+  BRIGHT_RED_BG     = bright_background_color("red")
+  BRIGHT_GREEN_BG   = bright_background_color("green")
+  BRIGHT_YELLOW_BG  = bright_background_color("yellow")
+  BRIGHT_BLUE_BG    = bright_background_color("blue")
+  BRIGHT_MAGENTA_BG = bright_background_color("magenta")
+  BRIGHT_CYAN_BG    = bright_background_color("cyan")
+  BRIGHT_WHITE_BG   = bright_background_color("white")
+
+  # Output layer semantics
+  # Outcome = SUCCESS, DONE, ERROR
+  # Flow = STEP, PROGRESS, SKIP
+  # Signal Strength = INFO -> NOTICE -> WARNING -> ERROR
+
+  # Structure semantics
+  DIM     = BRIGHT_BLACK_FG       # for boilerplate or noisy lines
+  HEADER  = BOLD BRIGHT_BLUE_FG
+  SECTION = BOLD BRIGHT_WHITE_FG  # mini-header
+
+  # Prompt semantics
+  CHOICE        = BOLD BRIGHT_MAGENTA_FG
+  PROMPT        = BOLD BRIGHT_CYAN_FG
+  CHOICE_BADGE  = BRIGHT_MAGENTA_BG BRIGHT_WHITE_FG BOLD " CHOOSE " RESET
+  PROMPT_BADGE  = BRIGHT_CYAN_BG BLACK_FG BOLD " ? " RESET
+
+  # Flow semantics
+  INFO           = BRIGHT_CYAN_FG
+  PROGRESS       = BRIGHT_BLUE_FG         # for ongoing work that isn't success yet
+  STEP           = BOLD BRIGHT_MAGENTA_FG # marks transitions between phases
+  INFO_BADGE     = BRIGHT_BLUE_BG BRIGHT_WHITE_FG BOLD " INFO " RESET
+  PROGRESS_BADGE = BRIGHT_BLUE_BG BRIGHT_WHITE_FG BOLD " RUN " RESET
+  STEP_BADGE     = BRIGHT_MAGENTA_BG BRIGHT_WHITE_FG BOLD " STEP " RESET
+
+  # Outcome semantics
+  DONE          = BOLD BRIGHT_GREEN_FG  # for final completion
+  ERROR         = BOLD BRIGHT_RED_FG
+  SUCCESS       = BRIGHT_GREEN_FG
+  WARNING       = BOLD BRIGHT_YELLOW_FG UNDERLINE
+  DONE_BADGE    = BRIGHT_GREEN_BG BRIGHT_WHITE_FG BOLD " DONE " RESET
+  ERROR_BADGE   = BRIGHT_RED_BG BRIGHT_WHITE_FG BOLD " ERROR " RESET
+  SUCCESS_BADGE = GREEN_BG BLACK_FG BOLD " OK " RESET
+  WARNING_BADGE = BRIGHT_YELLOW_BG BLACK_FG BOLD " WARN " RESET
+
+  # Information density semantics
+  NOTICE        = BRIGHT_WHITE_FG   # for deprecations, behavioral changes
+  DEBUG         = BRIGHT_BLACK_FG   # muted, intentionally low contrast, use with DEBUG=1 env toggle
+  SKIP          = BRIGHT_CYAN_FG    # for skipped steps or cached results
+  DEBUG_BADGE   = BLACK_BG BRIGHT_WHITE_FG " DEBUG " RESET
+  NOTICE_BADGE  = WHITE_BG BLACK_FG BOLD " NOTE " RESET
+  SKIP_BADGE    = BRIGHT_CYAN_BG BLACK_FG BOLD " SKIP " RESET
+
+  # Data-oriented semantics
+  PATH 	= BOLD BRIGHT_WHITE_FG       # highlights filesystem paths
+  URL 	= UNDERLINE BRIGHT_BLUE_FG   # highlights URLs
+  VALUE = BRIGHT_MAGENTA_FG          # for numbers, sizes, versions, timings
 }
 
 function basename(path,    n, a) {
@@ -124,14 +222,6 @@ function foreground_color(name) {
   return terminal_color(name, 0)
 }
 
-function terminal_capability(capability,    output, status) {
-    if (ENVIRON["NO_COLOR"]) return ""
-    cmd = "tput " capability
-    status = (cmd | getline output)
-    close(cmd)
-    return (status > 0) ? output : ""
-}
-
 function terminal_color(name, is_bg,    colors, color_map) {
     split("black red green yellow blue magenta cyan white", colors, " ")
     for (i in colors) color_map[colors[i]] = i - 1
@@ -141,6 +231,34 @@ function terminal_color(name, is_bg,    colors, color_map) {
         return terminal_capability(capability color_map[name])
     }
     return ""
+}
+
+function bright_foreground_color(name) {
+  return terminal_bright_color(name, 0)
+}
+
+function bright_background_color(name) {
+  return terminal_bright_color(name, 1)
+}
+
+function terminal_bright_color(name, is_bg,    colors, color_map) {
+  split("black red green yellow blue magenta cyan white", colors, " ")
+  for (i in colors) color_map[colors[i]] = i - 1
+
+  if (name in color_map) {
+    # Many terminfo entries expose bright colors as setaf/setab + 8
+    capability = (is_bg) ? "setab " : "setaf "
+    return terminal_capability(capability (color_map[name] + 8))
+  }
+  return ""
+}
+
+function terminal_capability(capability,    output, status) {
+    if (ENVIRON["NO_COLOR"]) return ""
+    cmd = "tput " capability
+    status = (cmd | getline output)
+    close(cmd)
+    return (status > 0) ? output : ""
 }
 
 function truncate_ansi(s, max,    out, i, c, esc, vis) {
