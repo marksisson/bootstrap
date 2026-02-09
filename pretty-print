@@ -57,6 +57,12 @@ BEGIN {
   next
 }
 
+/^Restore successful/ {
+  show(CR CLEAR_LINE SUCCESS $0 LF)
+  next
+}
+
+# default
 {
   show(CR CLEAR_LINE INFO_BADGE SPACE $0)
   next
