@@ -26,9 +26,17 @@ if [ ! -n "${NIX_PROFILES:-}" ]; then
 fi
 
 # use local nixpkgs
-if [ ! -n "${NIXPKGS:-}" ]; then
+if [ -z "${NIXPKGS:-}" ]; then
   printf "\033[94mInstalling canonical nixpkgs...\n\033[0m"
-  export NIXPKGS=$(nix eval --raw --impure --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath')
+
+  if ! NIXPKGS=$(nix eval --raw --impure \
+    --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath'
+  ); then
+    echo "Failed to fetch nixpkgs (GitHub rate limit?)" >&2
+    exit 1
+  fi
+
+  export NIXPKGS
 fi
 
 # add local nixpkgs to user registry
