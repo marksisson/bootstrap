@@ -15,7 +15,7 @@ BEGIN {
 }
 
 /^Select/ {
-  show(CR CLEAR_LINE CHOOSE $0)
+  show(CR CLEAR_LINE CHOICE $0)
   next
 }
 
