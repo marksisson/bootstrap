@@ -51,6 +51,11 @@ BEGIN {
   }
 }
 
+# age
+/^Wrong password/ {
+  show(CR CLEAR_LINE ERROR $0 LF)
+}
+
 {
   show(CR CLEAR_LINE INFO_BADGE SPACE $0)
   next
