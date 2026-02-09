@@ -47,8 +47,8 @@ pretty_print() {
   local completion="${1:-}"  # optional completion message
 
   if [[ -z "$PRETTY_PRINT" ]]; then
-    PRETTY_PRINT=$(curl -fsSL https://raw.githubusercontent.com/marksisson/bootstrap/main/pretty_print) || {
-      echo "Failed to fetch pretty_print" >&2; return 1
+    PRETTY_PRINT=$(curl -fsSL https://raw.githubusercontent.com/marksisson/bootstrap/main/pretty-print) || {
+      echo "Failed to fetch pretty-print" >&2; return 1
     }
   fi
 
@@ -99,7 +99,7 @@ fi
 
     echo
     sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | pretty_print "darwin configuration complete..."
+      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} 2>&1 | pretty_print "Darwin configuration complete..."
     echo
   fi
 
@@ -146,7 +146,7 @@ if ! command -v home-manager &>/dev/null; then
   echo
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
   nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | pretty_print "home configuration complete..."
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure 2>&1 | pretty_print "Home configuration complete..."
   echo
 fi
 

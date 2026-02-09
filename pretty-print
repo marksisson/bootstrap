@@ -17,7 +17,7 @@ BEGIN {
   }
 }
 
-/^Installing|^Configuring|^Starting|^Activating|^setting|^configuring/ {
+/^Installing|^Configuring|^Retrieving|^Select|^Done/ {
   show(CR CLEAR_LINE INFO $0 RESET)
   next
 }
