@@ -9,26 +9,42 @@ BEGIN {
   }
 }
 
-/^Installing|^Configuring|^Retrieving/ {
-  show(CR CLEAR_LINE STEP $0)
+/^HEADER/ {
+  show(CR CLEAR_LINE HEADER substr($0, index($0, $2)) LF)
   next
 }
 
-/^Select/ {
-  show(CR CLEAR_LINE CHOICE $0)
+/^STEP/ {
+  show(CR CLEAR_LINE STEP substr($0, index($0, $2)) LF)
   next
 }
 
-/^Invalid/ {
-  show(CR CLEAR_LINE WARNING $0)
+/^SUCCESS/ {
+  show(CR CLEAR_LINE SUCCESS substr($0, index($0, $2)) LF)
   next
 }
 
-/^Done/ {
-  show(CR CLEAR_LINE DONE $0)
+/^WARNING/ {
+  show(CR CLEAR_LINE WARNING substr($0, index($0, $2)) LF)
   next
 }
 
+/^ERROR/ {
+  show(CR CLEAR_LINE ERROR substr($0, index($0, $2)) LF)
+  next
+}
+
+/^CHOICE/ {
+  show(CR CLEAR_LINE CHOICE substr($0, index($0, $2)) LF)
+  next
+}
+
+/^DONE/ {
+  show(CR CLEAR_LINE DONE substr($0, index($0, $2)) LF)
+  next
+}
+
+# nix
 {
   if (match($0, /^building '([^']+)'\.\.\.$/, arr)) {
     show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "building" SPACE DIM "'" PATH arr[1] RESET DIM "'" "...")
@@ -49,17 +65,6 @@ BEGIN {
     show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" SPACE "into the Git cache...")
     next
   }
-}
-
-# age
-/^Wrong password/ {
-  show(CR CLEAR_LINE ERROR $0 LF)
-  next
-}
-
-/^Restore successful/ {
-  show(CR CLEAR_LINE SUCCESS $0 LF)
-  next
 }
 
 # default
