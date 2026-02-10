@@ -9,104 +9,73 @@ BEGIN {
   }
 }
 
-/^HEADER/ {
-  show(CR CLEAR_LINE HEADER substr($0, index($0, $2)) LF)
-  next
-}
-
-/^STEP/ {
-  show(CR CLEAR_LINE STEP substr($0, index($0, $2)) LF)
-  next
-}
-
-/^SUCCESS/ {
-  show(CR CLEAR_LINE SUCCESS substr($0, index($0, $2)) LF)
-  next
-}
-
-/^WARNING/ {
-  show(CR CLEAR_LINE WARNING substr($0, index($0, $2)) LF)
-  next
-}
-
-/^ERROR/ {
-  show(CR CLEAR_LINE ERROR substr($0, index($0, $2)) LF)
-  next
-}
-
-/^CHOICE/ {
-  show(CR CLEAR_LINE CHOICE substr($0, index($0, $2)) LF)
-  next
-}
-
-/^DONE/ {
-  show(CR CLEAR_LINE DONE substr($0, index($0, $2)) LF)
-  next
-}
-
-# nix
 {
-  if (match($0, /^building '([^']+)'\.\.\.$/, arr)) {
-    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "building" SPACE DIM "'" PATH arr[1] RESET DIM "'" "...")
-    next
-  }
-}
-
-{
-  if (match($0, /^copying path '([^']+)' from '([^']+)'\.\.\.$/, arr)) {
-    show(CR CLEAR_LINE PROGRESS_BADGE SPACE \
-      DIM "copying path" SPACE DIM "'" PATH arr[1] RESET DIM "'" SPACE "from" SPACE "'" URL arr[2] RESET DIM "'" "...")
-    next
-  }
-}
-
-{
-  if (match($0, /^unpacking '([^']+)' into the Git cache\.\.\.$/, arr)) {
-    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" SPACE "into the Git cache...")
-    next
-  }
-}
-
-# default
-{
-  show(CR CLEAR_LINE INFO_BADGE SPACE $0)
-  next
+  format($0)
 }
 
 END {
-  # Print optional completion message in color if non-empty
+  # Print optional completion message
   if (completion != "") {
-    show(CR CLEAR_LINE DONE completion LF)
-  }
-  else {
-    show(LF)
+    $0 = completion
+    format($0)
   }
 }
 
-function print_usage(    self) {
-    self = script_name()
+function format(line,    arr) {
+  if (line ~ /^HEADER/) {
+    show(CR CLEAR_LINE HEADER substr(line, index(line, $2)) LF)
+    return
+  }
 
-    ORS = "\n"
+  if (line ~ /^STEP/) {
+    show(CR CLEAR_LINE STEP substr(line, index(line, $2)) LF)
+    return
+  }
 
-    print HEADER "Usage" RESET
-    print "  " BOLD self RESET " [options] < input"
-    print ""
+  if (line ~ /^SUCCESS/) {
+    show(CR CLEAR_LINE SUCCESS substr(line, index(line, $2)) LF)
+    return
+  }
 
-    print HEADER "Description" RESET
-    print "  " INFO "Formats and colorizes build output." RESET
-    print ""
+  if (line ~ /^WARNING/) {
+    show(CR CLEAR_LINE WARNING substr(line, index(line, $2)) LF)
+    return
+  }
 
-    print HEADER "Environment" RESET
-    print "  " INFO "NO_COLOR" RESET "      Disable ANSI colors"
-    print ""
+  if (line ~ /^ERROR/) {
+    show(CR CLEAR_LINE ERROR substr(line, index(line, $2)) LF)
+    return
+  }
 
-    print INFO_BADGE " Reads from stdin and writes to stdout " RESET
-}
+  if (line ~ /^CHOICE/) {
+    show(CR CLEAR_LINE CHOICE substr(line, index(line, $2)) LF)
+    return
+  }
 
-function show(line) {
-  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
-  print line RESET
-  if (tty) fflush()
+  if (line ~ /^DONE/) {
+    show(CR CLEAR_LINE DONE substr(line, index(line, $2)) LF)
+    return
+  }
+
+  # nix patterns
+  if (match(line, /^building '([^']+)'\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "building" SPACE DIM "'" PATH arr[1] RESET DIM "'" "...")
+    return
+  }
+
+  if (match(line, /^copying path '([^']+)' from '([^']+)'\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE \
+      DIM "copying path" SPACE DIM "'" PATH arr[1] RESET DIM "'" SPACE "from" SPACE "'" URL arr[2] RESET DIM "'" "...")
+    return
+  }
+
+  if (match(line, /^unpacking '([^']+)' into the Git cache\.\.\.$/, arr)) {
+    show(CR CLEAR_LINE PROGRESS_BADGE SPACE DIM "unpacking" SPACE DIM "'" URL arr[1] RESET DIM "'" SPACE "into the Git cache...")
+    return
+  }
+
+  # default
+  show(CR CLEAR_LINE INFO_BADGE SPACE line)
 }
 
 function styles() {
@@ -214,6 +183,32 @@ function styles() {
   PATH 	= BOLD BRIGHT_WHITE_FG       # highlights filesystem paths
   URL 	= UNDERLINE BRIGHT_BLUE_FG   # highlights URLs
   VALUE = BRIGHT_MAGENTA_FG          # for numbers, sizes, versions, timings
+}
+
+function print_usage(    self) {
+  self = script_name()
+
+  ORS = "\n"
+
+  print HEADER "Usage" RESET
+  print "  " BOLD self RESET " [options] < input"
+  print ""
+
+  print HEADER "Description" RESET
+  print "  " INFO "Formats and colorizes build output." RESET
+  print ""
+
+  print HEADER "Environment" RESET
+  print "  " INFO "NO_COLOR" RESET "      Disable ANSI colors"
+  print ""
+
+  print INFO_BADGE " Reads from stdin and writes to stdout " RESET
+}
+
+function show(line) {
+  if (tty && cols > 0) line = truncate_ansi(line, cols-1)
+  print line RESET
+  if (tty) fflush()
 }
 
 function basename(path,    n, a) {
