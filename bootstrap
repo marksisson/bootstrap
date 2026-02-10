@@ -51,7 +51,8 @@ export SUCCESS="SUCCESS" WARNING="WARNING" ERROR="ERROR"
 # install gnupg configuration
 export GNUPGHOME="$HOME/.config/gnupg"
 if [ ! -f "$GNUPGHOME/gpg-agent.conf" ]; then
-  echo $STEP "Installing gnupg configuration..." && nix run github:marksisson/gnupg |& pretty_print
+  echo $STEP "Retrieving gnupg configuration..." | pretty_print
+  nix run github:marksisson/gnupg |& pretty_print
 fi
 
 # enable ssh auth via gpg-agent
