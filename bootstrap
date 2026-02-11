@@ -8,27 +8,28 @@ ERROR=$(tput bold)$(tput setaf 9)
 
 # install nix
 if ! command -v nix &>/dev/null; then
-  echo $STEP "Installing Nix..." $RESET
+  echo "$STEP" "Installing Nix..." "$RESET"
   curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
 fi
 
 # make nix available to current script
 if [ ! -n "${NIX_PROFILES:-}" ]; then
+  # shellcheck disable=SC1091
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
 # use local nixpkgs
 if [ -z "${NIXPKGS:-}" ]; then
-  echo $STEP "Installing canonical nixpkgs..." $RESET
+  echo "$STEP" "Installing canonical nixpkgs..." "$RESET"
   if ! NIXPKGS=$(nix eval --raw --impure \
     --expr 'let flake = builtins.getFlake "github:marksisson/parts"; in flake.inputs.nixpkgs.outPath'
-  ); then echo $ERROR "Failed to fetch nixpkgs (GitHub rate limit?)" $RESET >&2; exit 1
+  ); then echo "$ERROR" "Failed to fetch nixpkgs (GitHub rate limit?)" "$RESET" >&2; exit 1
   fi
   export NIXPKGS
 fi
 
 # add local nixpkgs to user registry
-nix registry add nixpkgs $NIXPKGS
+nix registry add nixpkgs "$NIXPKGS"
 
 # install packages needed by remainder of script
 if [ -z "${SCRIPT_IN_NIX_SHELL:-}" ]; then
@@ -40,7 +41,7 @@ pretty_print() {
   local completion="${1:-}"  # optional completion message
   if [[ -z "$PRETTY_PRINT" ]]; then
     PRETTY_PRINT=$(curl -fsSL https://raw.githubusercontent.com/marksisson/bootstrap/main/pretty-print) || {
-      echo $ERROR "Failed to fetch pretty-print" $RESET >&2; return 1
+      echo $ERROR "Failed to fetch pretty-print" "$RESET" >&2; return 1
     }
   fi
   gawk -v completion="$completion" "$PRETTY_PRINT"
@@ -63,8 +64,8 @@ fi
 # enable ssh auth via gpg-agent
 if [[ "${SSH_AUTH_SOCK:-}" != *gpg-agent* ]]; then
   echo $STEP "Configuring ssh..." | pretty_print
-  export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
-  mkdir -p "$HOME/.ssh" && ssh-keyscan -H github.com > $HOME/.ssh/known_hosts
+  SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket) && export SSH_AUTH_SOCK
+  mkdir -p "$HOME"/.ssh && ssh-keyscan -H github.com > "$HOME"/.ssh/known_hosts
 fi
 
 echo
@@ -96,8 +97,8 @@ echo
 
     echo
 
-    sudo nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-darwin/nix-darwin#darwin-rebuild -- \
-      switch --flake git+ssh://git@github.com/marksisson/configurations#${DARWIN_CONFIG} |& pretty_print "$SUCCESS Darwin configuration complete..."
+    sudo nix run --override-input nixpkgs "$(nix registry resolve nixpkgs)" github:nix-darwin/nix-darwin#darwin-rebuild -- \
+      switch --flake git+ssh://git@github.com/marksisson/configurations#"${DARWIN_CONFIG}" |& pretty_print "$SUCCESS Darwin configuration complete..."
   fi
 
   # restart nix daemon to pickup nix configuration changes
@@ -143,8 +144,8 @@ if ! command -v home-manager &>/dev/null; then
   echo
 
   export NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_BROKEN=1
-  nix run --override-input nixpkgs $(nix registry resolve nixpkgs) github:nix-community/home-manager#home-manager -- \
-    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#${HOME_CONFIG} --impure |& pretty_print "$SUCCESS Home configuration complete..."
+  nix run --override-input nixpkgs "$(nix registry resolve nixpkgs)" github:nix-community/home-manager#home-manager -- \
+    switch -b backup --flake git+ssh://git@github.com/marksisson/configurations#"${HOME_CONFIG}" --impure |& pretty_print "$SUCCESS Home configuration complete..."
 fi
 
 # remove local nixpkgs from user registry
